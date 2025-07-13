@@ -38,6 +38,7 @@ struct jogador {
     int valor_mao[20];
     char naipe_mao[20];
     int qtd_carta;
+    int recusou;
 };
 
 // Procedimento para criar um baralho embaralhado e salva no arquivo binário "baralho.dat"
@@ -97,6 +98,7 @@ void comprar_carta(struct jogador *jogador, int *indice){
     jogador->naipe_mao[jogador->qtd_carta] = carta_comprada.naipe;
     jogador->qtd_carta++;
     jogador->soma_mao += carta_comprada.valor;
+    jogador->recusou = 0;
     
     // Incrementa o indice para a próxima leitura ("retira a carta do baralho")
     (*indice)++;
@@ -118,6 +120,8 @@ int main(void) {
     
     // Variável para auxiliar a posição de leitura do arquivo (Qual carta deve ser tirada do baralho)
     int indice_carta = 0;
+    
+    
     
     //Inicializa os jogadores
     struct jogador jogador1;
@@ -144,8 +148,10 @@ int main(void) {
     }
     
     int rodadas = 1;
+    int desistencia_dupla = 0; //Contar se jogadores nao quiserem mais comprar cartas
+    
     // Inicia as rodadas e continua enquanto nenhum dos jogadores tem soma igual a 21 ou mais
-    while(jogador1.soma_mao < 21 && jogador2.soma_mao < 21){
+    while((jogador1.soma_mao < 21 && jogador2.soma_mao < 21) && desistencia_dupla < 2){
         // imprime a mão dos jogadores
         imprimir_mao(jogador1);    
         imprimir_mao(jogador2);
@@ -153,6 +159,7 @@ int main(void) {
         // Variáveis para leitura da opção
         char entrada[10];
         char opcao;
+        int alguem_comprou = 0;
         
         //Verifica a paridade das rodadas para decidir de quem é a vez
         if(rodadas % 2 != 0){
@@ -160,29 +167,63 @@ int main(void) {
             printf("Deseja comprar uma carta? (s/n): ");
             fgets(entrada, sizeof entrada, stdin);
             sscanf(entrada, "%c", &opcao);
+            
             if(opcao == 's'){
                 comprar_carta(&jogador1, &indice_carta);
                 printf("A carta comprada foi %d de %c\n", jogador1.valor_mao[jogador1.qtd_carta - 1], jogador1.naipe_mao[jogador1.qtd_carta - 1]);
+                alguem_comprou = 1;
+                
+            }else{
+                jogador1.recusou++;
             }
-        }else{
+        }
+        else{
             printf("\nTotal da mão de %s %d\n", jogador2.nome, jogador2.soma_mao);
             printf("Deseja comprar uma carta? (s/n): "); 
             fgets(entrada, sizeof entrada, stdin);
             sscanf(entrada, "%c", &opcao);
+            
             if(opcao == 's'){
                 comprar_carta(&jogador2, &indice_carta);
                 printf("A carta comprada foi %d de %c\n", jogador2.valor_mao[jogador2.qtd_carta - 1], jogador2.naipe_mao[jogador2.qtd_carta - 1]);
+                alguem_comprou = 1;
+            }else{
+                jogador2.recusou++;
             }
         }
+        // Atualiza contador de desistência
+        if(!alguem_comprou) {
+            desistencia_dupla++;
+        }else {
+            desistencia_dupla = 0;
+        }
         rodadas++;
-
+    }
+    
+    // Determina o vencedor
+    char *vencedor;
+    if(jogador1.soma_mao > 21){
+        vencedor = jogador2.nome;
+    }
+    else if(jogador2.soma_mao > 21){
+        vencedor = jogador1.nome;
+    }
+    else if(desistencia_dupla >= 2){
+        if(jogador1.soma_mao == jogador2.soma_mao) {
+            vencedor = "Empate";
+        } else {
+            vencedor = (jogador1.soma_mao > jogador2.soma_mao) ? jogador1.nome : jogador2.nome;
+        }
+    }
+    else {
+        vencedor = (jogador1.soma_mao > jogador2.soma_mao) ? jogador1.nome : jogador2.nome;
     }
     
     printf("\n----- FIM DE JOGO -----\n");
-    printf("O vencedor foi: %s\n", jogador1.soma_mao <= 21 ? jogador1.nome : jogador2.nome);
-    printf("Resultado final: \n");
+    printf("Resultado final:\n");
     imprimir_mao(jogador1);
     imprimir_mao(jogador2);
-    
+    printf("\nVencedor: %s\n", vencedor);
+    printf("\n----- FIM DE JOGO -----\n");
     return 0;
 }
